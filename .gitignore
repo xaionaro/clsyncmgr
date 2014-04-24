@@ -1,0 +1,51 @@
+# complied:
+*.o
+*.lo
+*.la
+/clsyncmgr
+/.libs
+
+#debian:
+/debian/clsyncmgr/
+/debian/*clsyncmgr*.log
+/debian/files
+/debian/*.ex
+/debian/*.debhelper
+
+# other:
+build
+.gdbcommands
+/doc/
+*.swp
+tmp
+
+# autotools build debris
+/compile
+/libtool
+/ltmain.sh
+/.deps/
+/aclocal.m4
+/autom4te.cache/
+/config.h*
+/config.log
+/config.status
+/config.guess
+/config.sub
+/configure
+/depcomp
+/install-sh
+/missing
+/stamp-h1
+Makefile
+Makefile.in
+
+/debian/autoreconf.after
+/debian/autoreconf.before
+/autoscan.log
+/configure.scan
+
+# coverage test files
+/*.gcda
+/*.gcno
+/*.gcov
+
