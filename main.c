@@ -19,6 +19,7 @@
 
 #include "malloc.h"
 #include "error.h"
+#include <libclsync.h>
 
 int main(int argc, char *argv[])
 {

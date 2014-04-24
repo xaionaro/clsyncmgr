@@ -12,10 +12,10 @@ DEBUGCFLAGS ?= -pipe -Wall -Werror -ggdb3 -export-dynamic -Wno-error=unused-vari
 
 CARCHFLAGS ?= -march=native
 
-LIBS := $(shell pkg-config --libs glib-2.0) -lpthread
+LIBS := $(shell pkg-config --libs clsync) -lpthread
 LDSECFLAGS ?= -Xlinker -zrelro
 LDFLAGS += $(LDSECFLAGS)
-INC := $(shell pkg-config --cflags glib-2.0) $(INC)
+INC := $(shell pkg-config --cflags clsync) $(INC)
 
 INSTDIR = $(DESTDIR)$(PREFIX)
 
