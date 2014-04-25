@@ -21,13 +21,47 @@
 #include "sighandler.h"
 #include "error.h"
 
-#include <string.h>	/* strdup() */
+#include <sys/types.h>	/* opendir()	*/
+#include <dirent.h>	/* opendir()	*/
+#include <string.h>	/* strdup()	*/
+#include <stdio.h>	/* snprintf()	*/
+#include <errno.h>	/* errno	*/
 #include <libclsync.h>
+
+int clsyncmgr_proc_clsync(socket_sockthreaddata_t *arg, sockcmd_t *sockcmd_p) {
+	return 0;
+}
 
 int clsyncmgr_watchdir_lookup(const char **const watchdir_pp, clsyncmgr_t *glob_p)
 {
+	struct dirent *dirent;
 	debug(4, "<%s>", *watchdir_pp);
 
+	
+
+	DIR *dir = opendir(*watchdir_pp);
+	if (dir == NULL) {
+		error("Cannot open directory \"%s\"", *watchdir_pp);
+		return errno;
+	}
+
+	while(errno=0, (dirent=readdir(dir)) != NULL) {
+		switch(dirent->d_type) {
+			case DT_SOCK: {
+				static char buf[BUFSIZ];
+				snprintf(buf, BUFSIZ, "%s/%s", *watchdir_pp, dirent->d_name);
+				debug(5, "found socket: <%s>", buf);
+
+				clsyncproc_t *clsyncproc_p = clsync_connect_unix(buf, clsyncmgr_proc_clsync, 0);
+				break;
+			}
+		}
+	}
+
+	if (errno)
+		error("Cannot read an entry from directory \"%s\"", *watchdir_pp);
+
+	closedir(dir);
 	return 0;
 }
 
@@ -57,12 +91,13 @@ int clsyncmgr_watchdir_remove_all(clsyncmgr_t *glob_p)
 
 int clsyncmgr_switch_state(clsyncmgr_t *glob_p, state_t state_new)
 {
-	debug(3, "new state: %u", state_new);
+	debug(2, "new state: %u", state_new);
 	glob_p->state = state_new;
 	return 0;
 }
 
 void clsyncmgr_idle(clsyncmgr_t *glob_p) {
+	debug(3, "");
 
 	dynamic_foreach(&glob_p->watchdirs, clsyncmgr_watchdir_lookup, glob_p);
 
