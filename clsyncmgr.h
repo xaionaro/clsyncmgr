@@ -22,7 +22,8 @@
 
 #include "common.h"
 #include "malloc.h"
-#include <pthread.h>	/* pthread_t */
+#include <pthread.h>	/* pthread_t  */
+#include <glib.h>	/* GHashTable */
 
 enum state_enum {
 	STATE_UNKNOWN = 0,
@@ -59,6 +60,8 @@ struct clsyncmgr {
 	pthread_t pthread_root;
 
 	dynamic_T(char *) watchdirs;
+
+	GHashTable *sock_unix;
 };
 typedef struct clsyncmgr clsyncmgr_t;
 

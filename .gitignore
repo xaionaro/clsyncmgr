@@ -20,6 +20,7 @@ build
 tmp
 
 # autotools build debris
+.depend
 /compile
 /libtool
 /ltmain.sh

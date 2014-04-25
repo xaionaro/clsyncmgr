@@ -8,7 +8,7 @@ EXAMPLES ?= yes
 CSECFLAGS ?= -fstack-protector-all -Wall --param ssp-buffer-size=4 -D_FORTIFY_SOURCE=2 -fstack-check -DPARANOID -std=gnu99
 CFLAGS ?= -pipe -O2
 CFLAGS += $(CSECFLAGS)
-DEBUGCFLAGS ?= -pipe -Wall -Werror -ggdb3 -export-dynamic -Wno-error=unused-variable $(CSECFLAGS)
+DEBUGCFLAGS ?= -pipe -Wall -Werror -ggdb3 -export-dynamic -Wno-error=unused-variable -O0 -pipe $(CSECFLAGS)
 
 CARCHFLAGS ?= -march=native
 

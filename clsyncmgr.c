@@ -45,14 +45,25 @@ int clsyncmgr_watchdir_lookup(const char **const watchdir_pp, clsyncmgr_t *glob_
 		return errno;
 	}
 
-	while(errno=0, (dirent=readdir(dir)) != NULL) {
-		switch(dirent->d_type) {
+	while (errno=0, (dirent=readdir(dir)) != NULL) {
+		switch (dirent->d_type) {
 			case DT_SOCK: {
-				static char buf[BUFSIZ];
+				char buf[BUFSIZ];
 				snprintf(buf, BUFSIZ, "%s/%s", *watchdir_pp, dirent->d_name);
 				debug(5, "found socket: <%s>", buf);
 
+				if(g_hash_table_lookup(glob_p->sock_unix, buf) != NULL) {
+					debug(5, "already connected to <%s>, skipping", buf);
+					continue;
+				}
+
 				clsyncproc_t *clsyncproc_p = clsync_connect_unix(buf, clsyncmgr_proc_clsync, 0);
+				if (clsyncproc_p == NULL) {
+					warning("Cannot connect to <%s> (errno %i: %s)", buf, errno, strerror(errno));
+					continue;
+				}
+				debug(5, "connected to <%s>", buf);
+				g_hash_table_insert(glob_p->sock_unix, strdup(buf), NULL);
 				break;
 			}
 		}
@@ -110,8 +121,8 @@ int clsyncmgr(clsyncmgr_t *glob_p)
 
 	debug(3, "starting");
 	clsyncmgr_switch_state(glob_p, STATE_STARTING);
-
 	sighandler_run(glob_p);
+	glob_p->sock_unix = g_hash_table_new_full(g_str_hash, g_str_equal, free, 0);
 
 	clsyncmgr_switch_state(glob_p, STATE_RUNNING);
 	while(glob_p->state == STATE_RUNNING) {
@@ -125,6 +136,7 @@ int clsyncmgr(clsyncmgr_t *glob_p)
 
 	sighandler_stop(glob_p);
 	clsyncmgr_watchdir_remove_all(glob_p);
+	g_hash_table_destroy(glob_p->sock_unix);
 
 	clsyncmgr_switch_state(glob_p, STATE_EXIT);
 	debug(3, "finished");
