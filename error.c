@@ -135,14 +135,15 @@ static flushfunct_t flushfunct[] = {
 	[OM_SYSLOG]	= (flushfunct_t)syslog_flush,
 };
 
-void _critical(outputmethod_t method, const char *const function_name, const char *fmt, ...) {
+void _critical(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...) {
 	{
 		va_list args;
 
-		outfunct[method]("Critical: %s(): ", function_name);
+		outfunct[method]("Critical (thread %p): %s(): ", thread, function_name);
 		va_start(args, fmt);
 		voutfunct[method](fmt, args);
 		va_end(args);
+		outfunct[method](" (current errno %i: %s)", errno, strerror(errno));
 		flushfunct[method](LOG_CRIT);
 	}
 
@@ -170,22 +171,23 @@ void _critical(outputmethod_t method, const char *const function_name, const cha
 	return;
 }
 
-void _error(outputmethod_t method, const char *const function_name, const char *fmt, ...) {
+void _error(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...) {
 	va_list args;
 
-	outfunct[method]("Error: %s(): ", function_name);
+	outfunct[method]("Error (thread %p): %s(): ", thread, function_name);
 	va_start(args, fmt);
 	voutfunct[method](fmt, args);
 	va_end(args);
+	outfunct[method](" (current errno %i: %s)", errno, strerror(errno));
 	flushfunct[method](LOG_ERR);
 
 	return;
 }
 
-void _info(outputmethod_t method, const char *const function_name, const char *fmt, ...) {
+void _info(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...) {
 	va_list args;
 
-	outfunct[method]("Info: %s(): ", function_name);
+	outfunct[method]("Info (thread %p): %s(): ", thread, function_name);
 	va_start(args, fmt);
 	voutfunct[method](fmt, args);
 	va_end(args);
@@ -194,10 +196,10 @@ void _info(outputmethod_t method, const char *const function_name, const char *f
 	return;
 }
 
-void _warning(outputmethod_t method, const char *const function_name, const char *fmt, ...) {
+void _warning(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...) {
 	va_list args;
 
-	outfunct[method]("Warning: %s(): ", function_name);
+	outfunct[method]("Warning (thread %p): %s(): ", thread, function_name);
 	va_start(args, fmt);
 	voutfunct[method](fmt, args);
 	va_end(args);
@@ -206,10 +208,10 @@ void _warning(outputmethod_t method, const char *const function_name, const char
 	return;
 }
 
-void _debug(outputmethod_t method, int debug_level, const char *const function_name, const char *fmt, ...) {
+void _debug(pthread_t thread, outputmethod_t method, int debug_level, const char *const function_name, const char *fmt, ...) {
 	va_list args;
 
-	outfunct[method]("Debug%u: %s(): ", debug_level, function_name);
+	outfunct[method]("Debug%u (thread %p): %s(): ", debug_level, thread, function_name);
 	va_start(args, fmt);
 	voutfunct[method](fmt, args);
 	va_end(args);

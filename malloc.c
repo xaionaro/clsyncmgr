@@ -17,7 +17,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <string.h>
+#include <string.h>	/* memset() */
+#include "configuration.h"
 #include "malloc.h"
 #include "error.h"
 
@@ -63,3 +64,52 @@ void *xrealloc(void *oldptr, size_t size) {
 
 	return ret;
 }
+
+void *_dynamic_add  (dynamic_t *data, size_t membsize)
+{
+	void *ret;
+
+	if (data->num_allocated <= data->num) {
+		data->num_allocated += ALLOC_PORTION;
+		data->dat = xrealloc(data->dat, data->num_allocated*membsize);
+	}
+
+	ret = &(((char *)data->dat)[ membsize * data->num++ ]);
+	memset(ret, 0, membsize);
+	return ret;
+}
+
+void  _dynamic_foreach(dynamic_t *data, dynamic_procfunct_t funct, size_t membsize)
+{
+	if (funct == NULL)
+		return;
+
+	{
+		int i;
+		i=0;
+		while (i < data->num) {
+			if(funct( &(((char *)data->dat)[i*membsize]) ))
+				break;
+			i++;
+		}
+	}
+
+	return;
+}
+
+void  _dynamic_reset(dynamic_t *data, freefunct_t freefunct)
+{
+	if (freefunct != NULL) {
+		int i;
+		i=0;
+		while (i < data->num) {
+			freefunct( ((char **)data->dat)[i] );
+			i++;
+		}
+	}
+
+	free(data->dat);
+	memset(data, 0, sizeof(*data));
+	return;
+}
+

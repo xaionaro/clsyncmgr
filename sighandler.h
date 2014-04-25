@@ -18,6 +18,14 @@
  */
 
 #include "common.h"
+#include "clsyncmgr.h"
+
+struct sighandler_arg {
+	clsyncmgr_t	*glob_p;
+	sigset_t	*sigset_p;
+};
+typedef struct sighandler_arg sighandler_arg_t;
 
 extern int sighandler_run(clsyncmgr_t *glob_p);
+extern int sighandler_stop(clsyncmgr_t *glob_p);
 

@@ -63,3 +63,11 @@ endif
 deinstall:
 	rm -f "$(INSTDIR)"/bin/$(binary) "$(INSTDIR)"/share/man/man1/clsync.1.gz "$(INSTDIR)"/share/man/man1/clsync.1
 
+depend: .depend
+
+.depend:
+	rm -f ./.depend
+	$(CC) $(CFLAGS) -MM $^ > ./.depend;
+
+include .depend
+

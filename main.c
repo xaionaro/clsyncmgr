@@ -67,6 +67,7 @@ static const struct option long_options[] =
 	{"syslog",		optional_argument,	NULL,	FL_SYSLOG},
 	{"debug",		optional_argument,	NULL,	FL_DEBUG},
 	{"quiet",		optional_argument,	NULL,	FL_QUIET},
+	{"watch-dirs",		required_argument,	NULL,	FL_WATCHDIR},
 
 	{NULL,			0,			NULL,	0}
 };
@@ -90,7 +91,9 @@ void _syntax(clsyncmgr_t *glob_p) {
 				(long_options[i].has_arg == required_argument ? " argument" : ""));
 		i++;
 	}
-	critical("Invalid arguments");
+	errno = EINVAL;
+	error("Invalid arguments");
+	exit(EINVAL);
 
 	return;
 }
@@ -217,7 +220,7 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 
 			break;
 		}
-		case FL_CLSYNCDIR: {
+		case FL_WATCHDIR: {
 			char *ptr = arg, *start = arg;
 			do {
 				switch(*ptr) {
@@ -229,7 +232,7 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 							continue;
 						} 
 
-						char *watchdir = strdup(start);
+						char *watchdir = start;
 						watchdir[ptr-start] = 0;
 						clsyncmgr_watchdir_add(glob_p, watchdir);
 						start = ptr+1;
@@ -369,7 +372,8 @@ int parse_config(clsyncmgr_t *glob_p) {
 
 int main(int argc, char *argv[])
 {
-	static clsyncmgr_t glob={{0}}, *glob_p = &glob;
+	static clsyncmgr_t glob={{0}};
+	clsyncmgr_t *glob_p = &glob;
 	int ret;
 
 	glob_p->config_block = DEFAULT_CONFIG_BLOCK;

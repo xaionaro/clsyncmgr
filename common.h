@@ -38,10 +38,10 @@
 
 #ifdef _GNU_SOURCE
 #	ifndef likely
-#		define likely(x)    _  _builtin_expect (!!(x), 1)
+#		define likely(x)    __builtin_expect(!!(x), 1)
 #	endif
 #	ifndef unlikely
-#		define unlikely(x)  _  _builtin_expect (!!(x), 0)
+#		define unlikely(x)  __builtin_expect(!!(x), 0)
 #	endif
 #else
 #	ifndef likely
@@ -58,6 +58,9 @@
 #define FLM_LONGOPTONLY	(1<<9)
 #define FLM_CONFIGONLY	(1<<8)
 
+#define _TEMPLATE(X, Y) X ## _ ## Y
+#define TEMPLATE(X, Y) _TEMPLATE(X, Y)
+
 enum flag {
 	FL_HELP			= 'h',
 	FL_SHOW_VERSION		= 'V',
@@ -72,7 +75,7 @@ enum flag {
 	FL_PIDFILE		= 'z',
 	FL_SYSLOG		= 'Y',
 	FL_SOCKETPATH		= 's',
-	FL_CLSYNCDIR		= 'W',
+	FL_WATCHDIR		= 'W',
 
 	FL_SOCKETAUTH		=  0|FLM_LONGOPTONLY,
 	FL_SOCKETMOD		=  1|FLM_LONGOPTONLY,
@@ -80,35 +83,6 @@ enum flag {
 
 };
 typedef enum flag flag_t;
-
-enum outputmethod {
-	OM_STDERR,
-	OM_STDOUT,
-	OM_SYSLOG,
-
-	OM_MAX
-};
-typedef enum outputmethod outputmethod_t;
-
-struct clsyncmgr {
-	int flags    [FLM_MAX];
-	int flags_set[FLM_MAX];
-
-	char *config_path;
-	char *config_block;
-
-	uid_t uid;
-	gid_t gid;
-
-	char *socketpath;
-	int socket;
-	mode_t socketmod;
-	uid_t  socketuid;
-	gid_t  socketgid;
-
-	char *pidfile;
-};
-typedef struct clsyncmgr clsyncmgr_t;
 
 #endif
 

@@ -17,9 +17,55 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "common.h"
+#ifndef __CLSYNCMGR_CLSYNCMGR_H
+#define __CLSYNCMGR_CLSYNCMGR_H
 
+#include "common.h"
+#include "malloc.h"
+#include <pthread.h>	/* pthread_t */
+
+enum state_enum {
+	STATE_UNKNOWN = 0,
+	STATE_STARTING,
+	STATE_RUNNING,
+	STATE_REHASH,
+	STATE_CLEANUP,
+	STATE_TERM,
+	STATE_EXIT,
+	STATE_PTHREAD_GC,
+};
+typedef enum state_enum state_t;
+
+struct clsyncmgr {
+	int flags    [FLM_MAX];
+	int flags_set[FLM_MAX];
+
+	char *config_path;
+	char *config_block;
+
+	uid_t uid;
+	gid_t gid;
+
+	char *socketpath;
+	int socket;
+	mode_t socketmod;
+	uid_t  socketuid;
+	gid_t  socketgid;
+
+	char *pidfile;
+
+	state_t state;
+
+	pthread_t pthread_root;
+
+	dynamic_T(char *) watchdirs;
+};
+typedef struct clsyncmgr clsyncmgr_t;
+
+extern int clsyncmgr_switch_state(clsyncmgr_t *glob_p, state_t state_new);
 extern int clsyncmgr_watchdir_remove_all(clsyncmgr_t *glob_p);
-extern int clsyncmgr_watchdir_add(clsyncmgr_t *glob_p, char *watchdir);
+extern int clsyncmgr_watchdir_add(clsyncmgr_t *glob_p, const char *const watchdir);
 extern int clsyncmgr(clsyncmgr_t *glob_p);
+
+#endif
 

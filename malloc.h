@@ -17,9 +17,33 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef __CLSYNCMGR_MALLOC_H
+#define __CLSYNCMGR_MALLOC_H
+
 #include <stdlib.h>
 
-void *xmalloc(size_t size);
-void *xcalloc(size_t nmemb, size_t size);
-void *xrealloc(void *oldptr, size_t size);
+#define dynamic_T(type)\
+struct {\
+	type   *dat;\
+	size_t  num;\
+	size_t  num_allocated;\
+}
+
+typedef dynamic_T(void) dynamic_t;
+
+typedef void (*freefunct_t)(void *);
+typedef int (*dynamic_procfunct_t)(void *);
+
+extern void *xmalloc(size_t size);
+extern void *xcalloc(size_t nmemb, size_t size);
+extern void *xrealloc(void *oldptr, size_t size);
+
+extern void *_dynamic_add    (dynamic_t *, size_t membsize);
+extern void  _dynamic_foreach(dynamic_t *, dynamic_procfunct_t funct,     size_t membsize);
+extern void  _dynamic_reset  (dynamic_t *, freefunct_t         freefunct);
+#define dynamic_add(a)              _dynamic_add    ((void *)(a), sizeof( *((a)->dat) ))
+#define dynamic_foreach(a, funct)   _dynamic_foreach((void *)(a), (dynamic_procfunct_t)funct, sizeof( *((a)->dat) ))
+#define dynamic_reset(a, freefunct) _dynamic_reset  ((void *)(a), freefunct)
+
+#endif
 
