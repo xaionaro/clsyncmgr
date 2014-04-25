@@ -24,31 +24,33 @@
 #include <string.h>	/* strdup() */
 #include <libclsync.h>
 
-int clsyncmgr_watchdir_watch(const char *const watchdir) {
+int clsyncmgr_watchdir_lookup(const char **const watchdir_pp, clsyncmgr_t *glob_p)
+{
+	debug(4, "<%s>", *watchdir_pp);
+
 	return 0;
 }
 
-int clsyncmgr_watchdir_unwatch(const char *const watchdir) {
+int clsyncmgr_watchdir_disconnect(const char **const watchdir_pp, clsyncmgr_t *glob_p)
+{
+	debug(4, "<%s>", *watchdir_pp);
+
 	return 0;
 }
 
 int clsyncmgr_watchdir_add(clsyncmgr_t *glob_p, const char *const watchdir)
 {
-	int rc;
-
-	rc = clsyncmgr_watchdir_watch(watchdir);
-	if (rc)
-		return rc;
-
-	char **watchdir_p = dynamic_add(&glob_p->watchdirs);
-	*watchdir_p = strdup(watchdir);
+	char **watchdir_pp = dynamic_add(&glob_p->watchdirs);
+	*watchdir_pp = strdup(watchdir);
 
 	return 0;
 }
 
 int clsyncmgr_watchdir_remove_all(clsyncmgr_t *glob_p)
 {
-	dynamic_foreach(&glob_p->watchdirs, clsyncmgr_watchdir_unwatch);
+	debug(3, "");
+
+	dynamic_foreach(&glob_p->watchdirs, clsyncmgr_watchdir_disconnect, glob_p);
 	dynamic_reset(&glob_p->watchdirs, free);
 	return 0;
 }
@@ -60,17 +62,28 @@ int clsyncmgr_switch_state(clsyncmgr_t *glob_p, state_t state_new)
 	return 0;
 }
 
+void clsyncmgr_idle(clsyncmgr_t *glob_p) {
+
+	dynamic_foreach(&glob_p->watchdirs, clsyncmgr_watchdir_lookup, glob_p);
+
+	return;
+}
+
 int clsyncmgr(clsyncmgr_t *glob_p)
 {
-	clsyncmgr_switch_state(glob_p, STATE_STARTING);
 	glob_p->pthread_root = pthread_self();
 
 	debug(3, "starting");
+	clsyncmgr_switch_state(glob_p, STATE_STARTING);
 
 	sighandler_run(glob_p);
 
 	clsyncmgr_switch_state(glob_p, STATE_RUNNING);
-	sleep(1);
+	while(glob_p->state == STATE_RUNNING) {
+		clsyncmgr_idle(glob_p);
+		sleep(1);
+		break;
+	}
 	clsyncmgr_switch_state(glob_p, STATE_CLEANUP);
 
 	debug(3, "cleanup");

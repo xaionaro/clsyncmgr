@@ -41,6 +41,9 @@ extern void _warning(pthread_t thread, outputmethod_t method, const char *const 
 extern void _info(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...);
 #define info(...) if (!glob_p->flags[FL_QUIET]) _info(pthread_self(), glob_p->flags[FL_OUTPUT_METHOD], __FUNCTION__, __VA_ARGS__)
 
+extern void _info_short(outputmethod_t method, const char *fmt, ...);
+#define info_short(...) if (!glob_p->flags[FL_QUIET]) _info_short(glob_p->flags[FL_OUTPUT_METHOD], __VA_ARGS__)
+
 extern void _debug(pthread_t thread, outputmethod_t method, int debug_level, const char *const function_name, const char *fmt, ...);
 #define debug(debug_level, ...) if (unlikely(glob_p->flags[FL_DEBUG] >= debug_level)) _debug(pthread_self(), glob_p->flags[FL_OUTPUT_METHOD], debug_level, __FUNCTION__, __VA_ARGS__)
 

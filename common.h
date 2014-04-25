@@ -23,7 +23,7 @@
 #define PROGRAM "clsyncmgr"
 #define AUTHOR "Dmitry Yu Okunev <dyokunev@ut.mephi.ru> 0x8E30679C"
 #define VERSION_MAJ 0
-#define VERSION_MIN 0
+#define VERSION_MIN 3
 
 #include <unistd.h>	/* gid_t */
 #include <sys/types.h>	/* gid_t */

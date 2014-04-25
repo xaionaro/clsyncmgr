@@ -79,7 +79,7 @@ void *_dynamic_add  (dynamic_t *data, size_t membsize)
 	return ret;
 }
 
-void  _dynamic_foreach(dynamic_t *data, dynamic_procfunct_t funct, size_t membsize)
+void  _dynamic_foreach(dynamic_t *data, dynamic_procfunct_t funct, void *arg, size_t membsize)
 {
 	if (funct == NULL)
 		return;
@@ -88,7 +88,7 @@ void  _dynamic_foreach(dynamic_t *data, dynamic_procfunct_t funct, size_t membsi
 		int i;
 		i=0;
 		while (i < data->num) {
-			if(funct( &(((char *)data->dat)[i*membsize]) ))
+			if(funct( &(((char *)data->dat)[i*membsize]), arg ))
 				break;
 			i++;
 		}

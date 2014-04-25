@@ -80,20 +80,18 @@ static char *const socketauth[] = {
 
 #define syntax() _syntax(glob_p)
 void _syntax(clsyncmgr_t *glob_p) {
-	info("possible options:");
+	info_short("possible options:");
 
 	int i=0;
 	while(long_options[i].name != NULL) {
 		if(!(long_options[i].val & FLM_CONFIGONLY))
-			info("\t--%-24s%c%c%s", long_options[i].name, 
+			info_short("\t--%-24s%c%c%s", long_options[i].name, 
 				long_options[i].val & FLM_LONGOPTONLY ? ' ' : '-', 
 				long_options[i].val & FLM_LONGOPTONLY ? ' ' : long_options[i].val, 
 				(long_options[i].has_arg == required_argument ? " argument" : ""));
 		i++;
 	}
-	errno = EINVAL;
-	error("Invalid arguments");
-	exit(EINVAL);
+	exit(errno);
 
 	return;
 }
@@ -108,6 +106,8 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 	switch(paramsource) {
 		case PS_ARGUMENT:
 			if(param_id & FLM_CONFIGONLY) {
+				errno = EINVAL;
+				error("Parameter \"%p\" is valid only in configuration file", param_id);
 				syntax();
 				return 0;
 			}
@@ -121,6 +121,7 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 			warning("Unknown parameter #%i source (value \"%s\").", param_id, arg!=NULL ? arg : "");
 			break;
 	}
+
 	switch(param_id) {
 		case '?':
 		case FL_HELP:
@@ -216,8 +217,6 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 			glob_p->socketgid = gid;
 			glob_p->flags[param_id]++;
 
-			debug(2, "socket: uid == %u; gid == %u", uid, gid);
-
 			break;
 		}
 		case FL_WATCHDIR: {
@@ -286,8 +285,11 @@ int parse_arguments(int argc, char *argv[], clsyncmgr_t *glob_p) {
 		int ret = parse_parameter(glob_p, c, optarg, PS_ARGUMENT);
 		if(ret) return ret;
 	}
-	if(optind+1 < argc)
+	if(optind+1 < argc) {
+		errno = EINVAL;
+		error("Not enough arguments");
 		syntax();
+	}
 
 	return 0;
 }

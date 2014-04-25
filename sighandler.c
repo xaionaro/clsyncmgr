@@ -101,7 +101,7 @@ int sighandler_run(clsyncmgr_t *glob_p)
 	int ret;
 	static sighandler_arg_t sighandler_arg = {0};
 
-	debug(3, "sighandler_run()");
+	debug(3, "starting");
 
 	// Creating signal handler thread
 	static sigset_t sigset_sighandler;

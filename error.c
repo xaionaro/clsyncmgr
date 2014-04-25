@@ -196,6 +196,17 @@ void _info(pthread_t thread, outputmethod_t method, const char *const function_n
 	return;
 }
 
+void _info_short(outputmethod_t method, const char *fmt, ...) {
+	va_list args;
+
+	va_start(args, fmt);
+	voutfunct[method](fmt, args);
+	va_end(args);
+	flushfunct[method](LOG_INFO);
+
+	return;
+}
+
 void _warning(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...) {
 	va_list args;
 
