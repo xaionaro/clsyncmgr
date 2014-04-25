@@ -5,23 +5,24 @@ COMPRESS_MAN ?= yes
 STRIP_BINARY ?= yes
 EXAMPLES ?= yes
 
-CSECFLAGS ?= -fstack-protector-all -Wall --param ssp-buffer-size=4 -D_FORTIFY_SOURCE=2 -fstack-check -DPARANOID -std=c99
+CSECFLAGS ?= -fstack-protector-all -Wall --param ssp-buffer-size=4 -D_FORTIFY_SOURCE=2 -fstack-check -DPARANOID -std=gnu99
 CFLAGS ?= -pipe -O2
 CFLAGS += $(CSECFLAGS)
 DEBUGCFLAGS ?= -pipe -Wall -Werror -ggdb3 -export-dynamic -Wno-error=unused-variable $(CSECFLAGS)
 
 CARCHFLAGS ?= -march=native
 
-LIBS := $(shell pkg-config --libs clsync) -lpthread
+LIBS := $(shell pkg-config --libs clsync) $(shell pkg-config --libs glib-2.0) -lpthread
 LDSECFLAGS ?= -Xlinker -zrelro
 LDFLAGS += $(LDSECFLAGS)
-INC := $(shell pkg-config --cflags clsync) $(INC)
+INC := $(shell pkg-config --cflags clsync) $(shell pkg-config --cflags glib-2.0) $(INC)
 
 INSTDIR = $(DESTDIR)$(PREFIX)
 
 objs=\
 error.o\
 malloc.o\
+clsyncmgr.o\
 main.o\
 
 binary=clsyncmgr

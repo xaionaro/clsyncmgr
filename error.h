@@ -17,8 +17,23 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "common.h"
 
-#define BACKTRACE_LENGTH (1<<8)
 
-extern void error(const char *fmt, ...);
+extern void _critical(outputmethod_t method, const char *const function_name, const char *fmt, ...);
+#define critical(...) _critical(glob_p->flags[FL_OUTPUT_METHOD], __FUNCTION__, __VA_ARGS__)
+
+#define critical_noglob(...) _critical(OM_STDERR, __FUNCTION__, __VA_ARGS__)
+
+extern void _error(outputmethod_t method, const char *const function_name, const char *fmt, ...);
+#define error(...) if (!glob_p->flags[FL_QUIET]) _error(glob_p->flags[FL_OUTPUT_METHOD], __FUNCTION__, __VA_ARGS__)
+
+extern void _warning(outputmethod_t method, const char *const function_name, const char *fmt, ...);
+#define warning(...) if (!glob_p->flags[FL_QUIET]) _warning(glob_p->flags[FL_OUTPUT_METHOD], __FUNCTION__, __VA_ARGS__)
+
+extern void _info(outputmethod_t method, const char *const function_name, const char *fmt, ...);
+#define info(...) if (!glob_p->flags[FL_QUIET]) _info(glob_p->flags[FL_OUTPUT_METHOD], __FUNCTION__, __VA_ARGS__)
+
+extern void _debug(outputmethod_t method, int debug_level, const char *const function_name, const char *fmt, ...);
+#define debug(debug_level, ...) if (unlikely(glob_p->flags[FL_DEBUG] >= debug_level)) _debug(glob_p->flags[FL_OUTPUT_METHOD], debug_level, __FUNCTION__, __VA_ARGS__)
 

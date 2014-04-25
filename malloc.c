@@ -29,7 +29,7 @@ void *xmalloc(size_t size) {
 	void *ret = malloc(size);
 
 	if(ret == NULL)
-		error("xmalloc(%u): Cannot allocate memory", size);
+		critical_noglob("malloc(%u): Cannot allocate memory", size);
 
 #ifdef PARANOID
 	memset(ret, 0, size);
@@ -46,7 +46,7 @@ void *xcalloc(size_t nmemb, size_t size) {
 	void *ret = calloc(nmemb, size);
 
 	if(ret == NULL)
-		error("xcalloc(%u, %u): Cannot allocate memory", nmemb, size);
+		critical_noglob("calloc(%u, %u): Cannot allocate memory", nmemb, size);
 
 	return ret;
 }
@@ -59,7 +59,7 @@ void *xrealloc(void *oldptr, size_t size) {
 	void *ret = realloc(oldptr, size);
 
 	if(ret == NULL)
-		error("xrealloc(%p, %u): Cannot allocate memory", oldptr, size);
+		critical_noglob("realloc(%p, %u): Cannot allocate memory", oldptr, size);
 
 	return ret;
 }
