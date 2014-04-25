@@ -93,7 +93,7 @@ void _syntax(clsyncmgr_t *glob_p) {
 
 #define version() _version(glob_p)
 int _version(clsyncmgr_t *glob_p) {
-	info(PROGRAM" v%i.%i\n\t"AUTHOR"\n", VERSION_MAJ, VERSION_MIN);
+	info(PROGRAM" v%i.%i\n\t"AUTHOR"", VERSION_MAJ, VERSION_MIN);
 	exit(0);
 }
 
@@ -111,7 +111,7 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 				return 0;
 			break;
 		default:
-			warning("Unknown parameter #%i source (value \"%s\").\n", param_id, arg!=NULL ? arg : "");
+			warning("Unknown parameter #%i source (value \"%s\").", param_id, arg!=NULL ? arg : "");
 			break;
 	}
 	switch(param_id) {
@@ -207,7 +207,7 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 			glob_p->socketgid = gid;
 			glob_p->flags[param_id]++;
 
-			debug(2, "socket: uid == %u; gid == %u\n", uid, gid);
+			debug(2, "socket: uid == %u; gid == %u", uid, gid);
 
 			break;
 		}
@@ -288,9 +288,9 @@ int parse_config(clsyncmgr_t *glob_p) {
 	gkf = g_key_file_new();
 
 	if(glob_p->config_path) {
-		debug(1, "Trying config-file \"%s\"\n", glob_p->config_path);
+		debug(1, "Trying config-file \"%s\"", glob_p->config_path);
 		if(!g_key_file_load_from_file(gkf, glob_p->config_path, G_KEY_FILE_NONE, NULL)) {
-			error("Cannot open/parse file \"%s\"\n", glob_p->config_path);
+			error("Cannot open/parse file \"%s\"", glob_p->config_path);
 			g_key_file_free(gkf);
 			return -1;
 		} else
@@ -319,9 +319,9 @@ int parse_config(clsyncmgr_t *glob_p) {
 			} else 
 				memcpy(config_path_real, *config_path_p, config_path_len+1);
 
-			debug(1, "Trying config-file \"%s\"\n", config_path_real);
+			debug(1, "Trying config-file \"%s\"", config_path_real);
 			if(!g_key_file_load_from_file(gkf, config_path_real, G_KEY_FILE_NONE, NULL)) {
-				debug(1, "Cannot open/parse file \"%s\"\n", config_path_real);
+				debug(1, "Cannot open/parse file \"%s\"", config_path_real);
 				config_path_p++;
 				continue;
 			}
@@ -340,7 +340,9 @@ int parse_config(clsyncmgr_t *glob_p) {
 
 int main(int argc, char *argv[])
 {
-	clsyncmgr_t glob={{0}}, *glob_p = &glob;
+	static clsyncmgr_t glob={{0}}, *glob_p = &glob;
+
+	glob_p->config_block = DEFAULT_CONFIG_BLOCK;
 
 	{
 		int ret;
