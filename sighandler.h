@@ -17,24 +17,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "clsyncmgr.h"
-#include "sighandler.h"
+#include "common.h"
 
-#include <libclsync.h>
-
-int clsyncmgr_watchdir_remove_all(clsyncmgr_t *glob_p)
-{
-	return 0;
-}
-
-int clsyncmgr_watchdir_add(clsyncmgr_t *glob_p, char *watchdir)
-{
-	return 0;
-}
-
-int clsyncmgr(clsyncmgr_t *glob_p) {
-	sighandler_run(glob_p);
-
-	return 0;
-}
+extern int sighandler_run(clsyncmgr_t *glob_p);
 

@@ -22,6 +22,7 @@ INSTDIR = $(DESTDIR)$(PREFIX)
 objs=\
 error.o\
 malloc.o\
+sighandler.o\
 clsyncmgr.o\
 main.o\
 

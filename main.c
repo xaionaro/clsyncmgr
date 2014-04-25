@@ -23,9 +23,7 @@
  */
 
 #include "common.h"
-#include "malloc.h"
-#include "error.h"
-#include <libclsync.h>
+
 #include <getopt.h>	/* getopt_long()	  */
 #include <stdlib.h>	/* getsubopt()		  */
 #include <errno.h>	/* errno		  */
@@ -35,6 +33,12 @@
 #include <pwd.h>	/* getpwnam()		  */
 #include <grp.h>	/* getgrnam()		  */
 #include <glib.h>	/* g_key_file_get_value() */
+
+#include "malloc.h"
+#include "error.h"
+#include "clsyncmgr.h"
+
+#include <libclsync.h>
 
 enum paramsource_enum {
         PS_UNKNOWN       = 0,
@@ -150,14 +154,16 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 				errno = EINVAL,
 				critical("Wrong socket auth mech entered: \"%s\"", arg);
 
+			break;
 		}
-		case FL_SOCKETMOD:
+		case FL_SOCKETMOD: {
 			if(!sscanf(arg, "%o", &glob_p->socketmod))
 				errno = EINVAL,
 				critical("Non octal value passed to --socket-mod: \"%s\"", arg);
 
 			glob_p->flags[param_id]++;
 			break;
+		}
 		case FL_SOCKETOWN: {
 			char *colon = strchr(arg, ':');
 			uid_t uid;
@@ -211,6 +217,29 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 
 			break;
 		}
+		case FL_CLSYNCDIR: {
+			char *ptr = arg, *start = arg;
+			do {
+				switch(*ptr) {
+					case 0:
+					case ':': {
+						if(ptr == start) {
+							start = ptr+1;
+							clsyncmgr_watchdir_remove_all(glob_p);
+							continue;
+						} 
+
+						char *watchdir = strdup(start);
+						watchdir[ptr-start] = 0;
+						clsyncmgr_watchdir_add(glob_p, watchdir);
+						start = ptr+1;
+						break;
+					}
+				}
+			} while(*(ptr++));
+			break;
+		}
+
 		default:
 			if(arg == NULL)
 				glob_p->flags[param_id]++;
@@ -341,23 +370,22 @@ int parse_config(clsyncmgr_t *glob_p) {
 int main(int argc, char *argv[])
 {
 	static clsyncmgr_t glob={{0}}, *glob_p = &glob;
+	int ret;
 
 	glob_p->config_block = DEFAULT_CONFIG_BLOCK;
 
-	{
-		int ret;
 
-		ret = parse_arguments(argc, argv, glob_p);
-		if(ret)
-			error("Cannot parse arguments");
+	ret = parse_arguments(argc, argv, glob_p);
+	if (ret)
+		error("Cannot parse arguments");
 
-		ret = parse_config(glob_p);
-		if(ret)
-			error("Cannot parse config file");
+	ret = parse_config(glob_p);
+	if (ret)
+		error("Cannot parse config file");
 
-	}
+	if (!ret)
+		ret = clsyncmgr(glob_p);
 
-
-	return 0;
+	return ret;
 }
 
