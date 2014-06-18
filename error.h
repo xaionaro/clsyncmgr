@@ -1,5 +1,5 @@
 /*
-    clsyncmgr - intermediate daemon to aggregate clsync's sockets
+    lrsync - rsync-like clsync wrapper
 
     Copyright (C) 2014  Dmitry Yu Okunev <dyokunev@ut.mephi.ru> 0x8E30679C
 
@@ -17,10 +17,33 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <pthread.h> /* pthread_self() */
+#ifndef __CLSYNC_ERROR_H
+#define __CLSYNC_ERROR_H
+
+extern void _critical( const char *const function_name, const char *fmt, ...);
+#define critical(...) 				_critical(__FUNCTION__, __VA_ARGS__)
+
+extern void _error(const char *const function_name, const char *fmt, ...);
+#define error(...) 				_error(__FUNCTION__, __VA_ARGS__)
+
+extern void _warning(const char *const function_name, const char *fmt, ...);
+#define warning(...) 				_warning(__FUNCTION__, __VA_ARGS__)
+
+extern void _info(const char *const function_name, const char *fmt, ...);
+#define info(...) 				_info(__FUNCTION__, __VA_ARGS__)
+
+extern void _info_short(const char *const function_name, const char *fmt, ...);
+#define info_short(...) 			_info_short(__FUNCTION__, __VA_ARGS__)
+
+extern void _debug(int debug_level, const char *const function_name, const char *fmt, ...);
+#define debug(debug_level, ...)			_debug(debug_level, __FUNCTION__, __VA_ARGS__)
+
+#define error_or_debug(debug_level, ...)	((debug_level)<0 ? _error(__FUNCTION__, __VA_ARGS__) : _debug(debug_level, __FUNCTION__, __VA_ARGS__))
+
+extern void error_init(void *_outputmethod, int *_quiet, int *_verbose, int *_debug);
 
 enum outputmethod {
-	OM_STDERR,
+	OM_STDERR = 0,
 	OM_STDOUT,
 	OM_SYSLOG,
 
@@ -28,22 +51,5 @@ enum outputmethod {
 };
 typedef enum outputmethod outputmethod_t;
 
-extern void _critical(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...);
-#define critical(...) _critical(pthread_self(), glob_p->flags[FL_OUTPUT_METHOD], __FUNCTION__, __VA_ARGS__)
-#define critical_noglob(...) _critical(pthread_self(), OM_STDERR, __FUNCTION__, __VA_ARGS__)
-
-extern void _error(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...);
-#define error(...) if (!glob_p->flags[FL_QUIET]) _error(pthread_self(), glob_p->flags[FL_OUTPUT_METHOD], __FUNCTION__, __VA_ARGS__)
-
-extern void _warning(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...);
-#define warning(...) if (!glob_p->flags[FL_QUIET]) _warning(pthread_self(), glob_p->flags[FL_OUTPUT_METHOD], __FUNCTION__, __VA_ARGS__)
-
-extern void _info(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...);
-#define info(...) if (!glob_p->flags[FL_QUIET]) _info(pthread_self(), glob_p->flags[FL_OUTPUT_METHOD], __FUNCTION__, __VA_ARGS__)
-
-extern void _info_short(outputmethod_t method, const char *fmt, ...);
-#define info_short(...) if (!glob_p->flags[FL_QUIET]) _info_short(glob_p->flags[FL_OUTPUT_METHOD], __VA_ARGS__)
-
-extern void _debug(pthread_t thread, outputmethod_t method, int debug_level, const char *const function_name, const char *fmt, ...);
-#define debug(debug_level, ...) if (unlikely(glob_p->flags[FL_DEBUG] >= debug_level)) _debug(pthread_self(), glob_p->flags[FL_OUTPUT_METHOD], debug_level, __FUNCTION__, __VA_ARGS__)
+#endif
 

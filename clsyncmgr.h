@@ -37,6 +37,11 @@ enum state_enum {
 };
 typedef enum state_enum state_t;
 
+struct clsyncproc_data {
+	char label[MAXLABELLENGTH];
+};
+typedef struct clsyncproc_data clsyncproc_data_t;
+
 struct clsyncmgr {
 	int flags    [FLM_MAX];
 	int flags_set[FLM_MAX];
@@ -60,15 +65,21 @@ struct clsyncmgr {
 	pthread_t pthread_root;
 
 	dynamic_T(char *) watchdirs;
+	dynamic_T(char *) socketpaths;
 
-	GHashTable *sock_unix;
+	char *execute;
+
+	GHashTable *sock_unix_ht_path;
+	GHashTable *sock_unix_ht_label;
 };
 typedef struct clsyncmgr clsyncmgr_t;
 
-extern int clsyncmgr_switch_state(clsyncmgr_t *glob_p, state_t state_new);
-extern int clsyncmgr_watchdir_remove_all(clsyncmgr_t *glob_p);
-extern int clsyncmgr_watchdir_add(clsyncmgr_t *glob_p, const char *const watchdir);
-extern int clsyncmgr(clsyncmgr_t *glob_p);
+extern int clsyncmgr_switch_state(clsyncmgr_t *ctx_p, state_t state_new);
+extern int clsyncmgr_watchdir_add(clsyncmgr_t *ctx_p, const char *const watchdir);
+extern int clsyncmgr_watchdir_remove_all(clsyncmgr_t *ctx_p);
+extern int clsyncmgr_socketpath_add(clsyncmgr_t *ctx_p, const char *const socketpath);
+extern int clsyncmgr_socketpath_remove_all(clsyncmgr_t *ctx_p);
+extern int clsyncmgr(clsyncmgr_t *ctx_p);
 
 #endif
 

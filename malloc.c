@@ -18,6 +18,7 @@
  */
 
 #include <string.h>	/* memset() */
+#include <errno.h>	/* EINVAL   */
 #include "configuration.h"
 #include "malloc.h"
 #include "error.h"
@@ -30,7 +31,7 @@ void *xmalloc(size_t size) {
 	void *ret = malloc(size);
 
 	if(ret == NULL)
-		critical_noglob("malloc(%u): Cannot allocate memory", size);
+		critical("malloc(%u): Cannot allocate memory", size);
 
 #ifdef PARANOID
 	memset(ret, 0, size);
@@ -47,7 +48,7 @@ void *xcalloc(size_t nmemb, size_t size) {
 	void *ret = calloc(nmemb, size);
 
 	if(ret == NULL)
-		critical_noglob("calloc(%u, %u): Cannot allocate memory", nmemb, size);
+		critical("calloc(%u, %u): Cannot allocate memory", nmemb, size);
 
 	return ret;
 }
@@ -60,7 +61,7 @@ void *xrealloc(void *oldptr, size_t size) {
 	void *ret = realloc(oldptr, size);
 
 	if(ret == NULL)
-		critical_noglob("realloc(%p, %u): Cannot allocate memory", oldptr, size);
+		critical("realloc(%p, %u): Cannot allocate memory", oldptr, size);
 
 	return ret;
 }
@@ -79,22 +80,24 @@ void *_dynamic_add  (dynamic_t *data, size_t membsize)
 	return ret;
 }
 
-void  _dynamic_foreach(dynamic_t *data, dynamic_procfunct_t funct, void *arg, size_t membsize)
+int   _dynamic_foreach(dynamic_t *data, dynamic_procfunct_t funct, void *arg, size_t membsize)
 {
+	int rc = 0;
+
 	if (funct == NULL)
-		return;
+		return EINVAL;
 
 	{
 		int i;
 		i=0;
 		while (i < data->num) {
-			if(funct( &(((char *)data->dat)[i*membsize]), arg ))
+			if ((rc=funct( &(((char *)data->dat)[i*membsize]), arg )))
 				break;
 			i++;
 		}
 	}
 
-	return;
+	return rc;
 }
 
 void  _dynamic_reset(dynamic_t *data, freefunct_t freefunct)

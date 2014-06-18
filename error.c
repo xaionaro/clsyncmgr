@@ -1,5 +1,5 @@
 /*
-    clsyncmgr - intermediate daemon to aggregate clsync's sockets
+    lrsync - rsync-like clsync wrapper
 
     Copyright (C) 2014  Dmitry Yu Okunev <dyokunev@ut.mephi.ru> 0x8E30679C
 
@@ -31,6 +31,15 @@
 #include <syslog.h>
 #include "error.h"
 #include "common.h"
+#include "configuration.h"
+
+static int zero     = 0;
+static int three    = 3;
+
+static int *outputmethod = &zero;
+static int *debug	 = &zero;
+static int *quiet	 = &zero;
+static int *verbose	 = &three;
 
 static int printf_stderr(const char *fmt, ...) {
 	va_list args;
@@ -74,47 +83,66 @@ static void flush_stdout(int level) {
 }
 
 
-static char _syslog_buffer[BUFSIZ];
-size_t _syslog_buffer_filled = 0;
-static int syslog_buf(const char *fmt, ...) {
-	int len;
-	va_list args;
+static char _syslog_buffer[SYSLOG_BUFSIZ+1] = {0};
+size_t      _syslog_buffer_filled = 0;
 
-	va_start(args, fmt);
-	len = vsnprintf (
-		&_syslog_buffer[_syslog_buffer_filled],
-		BUFSIZ - _syslog_buffer_filled,
-		fmt,
-		args
-	);
-	va_end(args);
-
-	if (len>0)
-		_syslog_buffer_filled += len;
-
-	return 0;
-}
 static int vsyslog_buf(const char *fmt, va_list args) {
 	int len;
+	size_t size;
+
+	size = SYSLOG_BUFSIZ - _syslog_buffer_filled;
+
+#ifdef VERYPARANOID
+	if (
+		(			 size	> SYSLOG_BUFSIZ)	|| 
+		(_syslog_buffer_filled + size	> SYSLOG_BUFSIZ)	||
+		(_syslog_buffer_filled		> SYSLOG_BUFSIZ)
+	) {
+		fprintf(stderr, "Security problem while vsyslog_buf(): "
+			"_syslog_buffer_filled == %lu; "
+			"size == %lu; "
+			"SYSLOG_BUFSIZ == "XTOSTR(SYSLOG_BUFSIZ)"\n",
+			_syslog_buffer_filled, size);
+		exit(ENOBUFS);
+	}
+#endif
+	if (!size)
+		return 0;
 
 	len = vsnprintf (
 		&_syslog_buffer[_syslog_buffer_filled],
-		BUFSIZ - _syslog_buffer_filled,
+		size,
 		fmt,
 		args
 	);
 
-	if (len>0)
+	if (len>0) {
 		_syslog_buffer_filled += len;
+		if (_syslog_buffer_filled > SYSLOG_BUFSIZ)
+			_syslog_buffer_filled = SYSLOG_BUFSIZ;
+	}
 
 	return 0;
 }
-static void syslog_flush(int level) {
-	syslog(level, "%s", _syslog_buffer);
+
+static int syslog_buf(const char *fmt, ...) {
+	va_list args;
+	int rc;
+
+	va_start(args, fmt);
+	rc = vsyslog_buf(fmt, args);
+	va_end(args);
+
+	return rc;
 }
 
-typedef int *(*outfunct_t)(const char *format, ...);
-typedef int *(*voutfunct_t)(const char *format, va_list ap);
+static void syslog_flush(int level) {
+	syslog(level, "%s", _syslog_buffer);
+	_syslog_buffer_filled = 0;
+}
+
+typedef int  *(  *outfunct_t)(const char *format, ...);
+typedef int  *( *voutfunct_t)(const char *format, va_list ap);
 typedef void *(*flushfunct_t)(int level);
 
 static outfunct_t outfunct[] = {
@@ -135,11 +163,16 @@ static flushfunct_t flushfunct[] = {
 	[OM_SYSLOG]	= (flushfunct_t)syslog_flush,
 };
 
-void _critical(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...) {
+void _critical(const char *const function_name, const char *fmt, ...) {
+	if (*quiet)
+		return;
+
+	outputmethod_t method = *outputmethod;
+
 	{
 		va_list args;
 
-		outfunct[method]("Critical (thread %p): %s(): ", thread, function_name);
+		outfunct[method]("Critical: %s(): ", function_name);
 		va_start(args, fmt);
 		voutfunct[method](fmt, args);
 		va_end(args);
@@ -147,6 +180,7 @@ void _critical(pthread_t thread, outputmethod_t method, const char *const functi
 		flushfunct[method](LOG_CRIT);
 	}
 
+#ifdef BACKTRACE_SUPPORT
 	{
 		void  *buf[BACKTRACE_LENGTH];
 		char **strings;
@@ -165,29 +199,47 @@ void _critical(pthread_t thread, outputmethod_t method, const char *const functi
 			flushfunct[method](LOG_CRIT);
 		}
 	}
+#endif
 
 	exit(errno);
 
 	return;
 }
 
-void _error(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...) {
+void _error(const char *const function_name, const char *fmt, ...) {
 	va_list args;
 
-	outfunct[method]("Error (thread %p): %s(): ", thread, function_name);
+	if (*quiet)
+		return;
+
+	if (*verbose < 1)
+		return;
+
+	outputmethod_t method = *outputmethod;
+
+	outfunct[method](*debug ? "Error: %s(): " : "Error: ", function_name);
 	va_start(args, fmt);
 	voutfunct[method](fmt, args);
 	va_end(args);
-	outfunct[method](" (current errno %i: %s)", errno, strerror(errno));
+	if (errno)
+		outfunct[method](" (%i: %s)", errno, strerror(errno));
 	flushfunct[method](LOG_ERR);
 
 	return;
 }
 
-void _info(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...) {
+void _info_short(const char *const function_name, const char *fmt, ...) {
 	va_list args;
 
-	outfunct[method]("Info (thread %p): %s(): ", thread, function_name);
+	if (*quiet)
+		return;
+
+	if (*verbose < 3)
+		return;
+
+	outputmethod_t method = *outputmethod;
+
+	outfunct[method](*debug ? "Info: %s(): " : "", function_name);
 	va_start(args, fmt);
 	voutfunct[method](fmt, args);
 	va_end(args);
@@ -196,9 +248,18 @@ void _info(pthread_t thread, outputmethod_t method, const char *const function_n
 	return;
 }
 
-void _info_short(outputmethod_t method, const char *fmt, ...) {
+void _info(const char *const function_name, const char *fmt, ...) {
 	va_list args;
 
+	if (*quiet)
+		return;
+
+	if (*verbose < 3)
+		return;
+
+	outputmethod_t method = *outputmethod;
+
+	outfunct[method](*debug ? "Info: %s(): " : "Info: ", function_name);
 	va_start(args, fmt);
 	voutfunct[method](fmt, args);
 	va_end(args);
@@ -207,10 +268,18 @@ void _info_short(outputmethod_t method, const char *fmt, ...) {
 	return;
 }
 
-void _warning(pthread_t thread, outputmethod_t method, const char *const function_name, const char *fmt, ...) {
+void _warning(const char *const function_name, const char *fmt, ...) {
 	va_list args;
 
-	outfunct[method]("Warning (thread %p): %s(): ", thread, function_name);
+	if (*quiet)
+		return;
+
+	if (*verbose < 2)
+		return;
+
+	outputmethod_t method = *outputmethod;
+
+	outfunct[method](*debug ? "Warning: %s(): " : "Warning: ", function_name);
 	va_start(args, fmt);
 	voutfunct[method](fmt, args);
 	va_end(args);
@@ -219,15 +288,31 @@ void _warning(pthread_t thread, outputmethod_t method, const char *const functio
 	return;
 }
 
-void _debug(pthread_t thread, outputmethod_t method, int debug_level, const char *const function_name, const char *fmt, ...) {
+void _debug(int debug_level, const char *const function_name, const char *fmt, ...) {
 	va_list args;
 
-	outfunct[method]("Debug%u (thread %p): %s(): ", debug_level, thread, function_name);
+	if (*quiet)
+		return;
+
+	if (debug_level > *debug)
+		return;
+
+	outputmethod_t method = *outputmethod;
+
+	outfunct[method]("Debug%u: %s(): ", debug_level, function_name);
 	va_start(args, fmt);
 	voutfunct[method](fmt, args);
 	va_end(args);
 	flushfunct[method](LOG_DEBUG);
 
+	return;
+}
+
+void error_init(void *_outputmethod, int *_quiet, int *_verbose, int *_debug) {
+	outputmethod 	= _outputmethod;
+	quiet		= _quiet;
+	verbose		= _verbose;
+	debug		= _debug;
 	return;
 }
 

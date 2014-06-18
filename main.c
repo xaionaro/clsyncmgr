@@ -19,7 +19,7 @@
 
 /*
  * This file is only for initial processes [parse arguments, config and run 
- * clsyncmgr(glob_p) from clsyncmgr.c]
+ * clsyncmgr(ctx_p) from clsyncmgr.c]
  */
 
 #include "common.h"
@@ -41,9 +41,9 @@
 #include <libclsync.h>
 
 enum paramsource_enum {
-        PS_UNKNOWN       = 0,
-        PS_ARGUMENT,
-        PS_CONFIG
+	PS_UNKNOWN       = 0,
+	PS_ARGUMENT,
+	PS_CONFIG
 };
 typedef enum paramsource_enum paramsource_t;
 
@@ -52,10 +52,12 @@ static const struct option long_options[] =
 	{"help",		optional_argument,	NULL,	FL_HELP},
 	{"version",		optional_argument,	NULL,	FL_SHOW_VERSION},
 
-	{"socket",		required_argument,	NULL,   FL_SOCKETPATH},
+/*	{"socket",		required_argument,	NULL,   FL_SOCKETPATH},
 	{"socket-auth",		required_argument,	NULL,	FL_SOCKETAUTH},
 	{"socket-mod",		required_argument,	NULL,	FL_SOCKETMOD},
-	{"socket-own",		required_argument,	NULL,	FL_SOCKETOWN},
+	{"socket-own",		required_argument,	NULL,	FL_SOCKETOWN},*/
+
+	{"execute",		required_argument,	NULL,	FL_EXECUTE},
 
 	{"background",		optional_argument,	NULL,	FL_BACKGROUND},
 	{"config-file",		required_argument,	NULL,	FL_CONFIGFILE},
@@ -67,6 +69,7 @@ static const struct option long_options[] =
 	{"syslog",		optional_argument,	NULL,	FL_SYSLOG},
 	{"debug",		optional_argument,	NULL,	FL_DEBUG},
 	{"quiet",		optional_argument,	NULL,	FL_QUIET},
+	{"connect",		required_argument,	NULL,	FL_CONNECT},
 	{"watch-dirs",		required_argument,	NULL,	FL_WATCHDIR},
 
 	{NULL,			0,			NULL,	0}
@@ -78,13 +81,13 @@ static char *const socketauth[] = {
 	NULL
 };
 
-#define syntax() _syntax(glob_p)
-void _syntax(clsyncmgr_t *glob_p) {
+#define syntax() _syntax(ctx_p)
+void _syntax(clsyncmgr_t *ctx_p) {
 	info_short("possible options:");
 
 	int i=0;
-	while(long_options[i].name != NULL) {
-		if(!(long_options[i].val & FLM_CONFIGONLY))
+	while (long_options[i].name != NULL) {
+		if (!(long_options[i].val & FLM_CONFIGONLY))
 			info_short("\t--%-24s%c%c%s", long_options[i].name, 
 				long_options[i].val & FLM_LONGOPTONLY ? ' ' : '-', 
 				long_options[i].val & FLM_LONGOPTONLY ? ' ' : long_options[i].val, 
@@ -96,25 +99,25 @@ void _syntax(clsyncmgr_t *glob_p) {
 	return;
 }
 
-#define version() _version(glob_p)
-int _version(clsyncmgr_t *glob_p) {
+#define version() _version(ctx_p)
+int _version(clsyncmgr_t *ctx_p) {
 	info(PROGRAM" v%i.%i\n\t"AUTHOR"", VERSION_MAJ, VERSION_MIN);
 	exit(0);
 }
 
-int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsource_t paramsource) {
-	switch(paramsource) {
+int parse_parameter(clsyncmgr_t *ctx_p, uint16_t param_id, char *arg, paramsource_t paramsource) {
+	switch (paramsource) {
 		case PS_ARGUMENT:
-			if(param_id & FLM_CONFIGONLY) {
+			if (param_id & FLM_CONFIGONLY) {
 				errno = EINVAL;
 				error("Parameter \"%p\" is valid only in configuration file", param_id);
 				syntax();
 				return 0;
 			}
-			glob_p->flags_set[param_id] = 1;
+			ctx_p->flags_set[param_id] = 1;
 			break;
 		case PS_CONFIG:
-			if(glob_p->flags_set[param_id])
+			if (ctx_p->flags_set[param_id])
 				return 0;
 			break;
 		default:
@@ -122,50 +125,50 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 			break;
 	}
 
-	switch(param_id) {
+	switch (param_id) {
 		case '?':
 		case FL_HELP:
 			syntax();
 			break;
 		case FL_CONFIGFILE:
-			glob_p->config_path  = arg;
+			ctx_p->config_path  = arg;
 			break;
 		case FL_CONFIGBLOCK:
-			glob_p->config_block = arg;
+			ctx_p->config_block = arg;
 			break;
 		case FL_GID:
-			glob_p->gid = (unsigned int)atol(arg);
-			glob_p->flags[param_id]++;
+			ctx_p->gid = (unsigned int)atol(arg);
+			ctx_p->flags[param_id]++;
 			break;
 		case FL_UID:
-			glob_p->uid = (unsigned int)atol(arg);
-			glob_p->flags[param_id]++;
+			ctx_p->uid = (unsigned int)atol(arg);
+			ctx_p->flags[param_id]++;
 			break;
 		case FL_PIDFILE:
-			glob_p->pidfile		= arg;
+			ctx_p->pidfile		= arg;
 			break;
 		case FL_SHOW_VERSION:
 			version();
 			break;
 		case FL_SOCKETPATH:
-			glob_p->socketpath	= arg;
+			ctx_p->socketpath	= arg;
 			break;
 		case FL_SOCKETAUTH: {
 			char *value;
 
-			glob_p->flags[FL_SOCKETAUTH] = getsubopt(&arg, socketauth, &value);
-			if(glob_p->flags[FL_SOCKETAUTH] == -1)
+			ctx_p->flags[FL_SOCKETAUTH] = getsubopt(&arg, socketauth, &value);
+			if (ctx_p->flags[FL_SOCKETAUTH] == -1)
 				errno = EINVAL,
 				critical("Wrong socket auth mech entered: \"%s\"", arg);
 
 			break;
 		}
 		case FL_SOCKETMOD: {
-			if(!sscanf(arg, "%o", &glob_p->socketmod))
+			if (!sscanf(arg, "%o", &ctx_p->socketmod))
 				errno = EINVAL,
 				critical("Non octal value passed to --socket-mod: \"%s\"", arg);
 
-			glob_p->flags[param_id]++;
+			ctx_p->flags[param_id]++;
 			break;
 		}
 		case FL_SOCKETOWN: {
@@ -173,7 +176,7 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 			uid_t uid;
 			gid_t gid;
 
-			if(colon == NULL) {
+			if (colon == NULL) {
 				struct passwd *pwent = getpwnam(arg);
 
 				if(pwent == NULL) {
@@ -196,7 +199,7 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 
 				errno=0;
 				struct passwd *pwent = getpwnam(user);
-				if(pwent == NULL) {
+				if (pwent == NULL) {
 					errno = EINVAL;
 					critical("Cannot find username \"%s\" (case #1)",
 						user);
@@ -213,27 +216,48 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 				gid = grent->gr_gid;
 			}
 
-			glob_p->socketuid = uid;
-			glob_p->socketgid = gid;
-			glob_p->flags[param_id]++;
+			ctx_p->socketuid = uid;
+			ctx_p->socketgid = gid;
+			ctx_p->flags[param_id]++;
 
 			break;
 		}
-		case FL_WATCHDIR: {
+		case FL_EXECUTE:
+			ctx_p->execute		= arg;
+			ctx_p->flags[param_id]++;
+
+			break;
+		case FL_CONNECT:
+		case FL_WATCHDIR:
+		{
 			char *ptr = arg, *start = arg;
+			typeof(clsyncmgr_watchdir_add)        *funct_add	= NULL;
+			typeof(clsyncmgr_watchdir_remove_all) *funct_remove_all = NULL;
+			switch (param_id) {
+				case FL_CONNECT:
+					funct_add        = clsyncmgr_watchdir_add;
+					funct_remove_all = clsyncmgr_watchdir_remove_all;
+					break;
+				case FL_WATCHDIR:
+					funct_add        = clsyncmgr_socketpath_add;
+					funct_remove_all = clsyncmgr_socketpath_remove_all;
+					break;
+				default:
+					break;
+			}
 			do {
 				switch(*ptr) {
 					case 0:
 					case ':': {
-						if(ptr == start) {
+						if (ptr == start) {
 							start = ptr+1;
-							clsyncmgr_watchdir_remove_all(glob_p);
+							funct_remove_all(ctx_p);
 							continue;
 						} 
 
-						char *watchdir = start;
-						watchdir[ptr-start] = 0;
-						clsyncmgr_watchdir_add(glob_p, watchdir);
+						char *path = start;
+						path[ptr-start] = 0;
+						funct_add(ctx_p, path);
 						start = ptr+1;
 						break;
 					}
@@ -244,15 +268,15 @@ int parse_parameter(clsyncmgr_t *glob_p, uint16_t param_id, char *arg, paramsour
 
 		default:
 			if(arg == NULL)
-				glob_p->flags[param_id]++;
+				ctx_p->flags[param_id]++;
 			else
-				glob_p->flags[param_id] = atoi(arg);
+				ctx_p->flags[param_id] = atoi(arg);
 			break;
 	}
 	return 0;
 }
 
-int parse_arguments(int argc, char *argv[], clsyncmgr_t *glob_p) {
+int parse_arguments(int argc, char *argv[], clsyncmgr_t *ctx_p) {
 	int c;
 	int option_index = 0;
 
@@ -261,14 +285,14 @@ int parse_arguments(int argc, char *argv[], clsyncmgr_t *glob_p) {
 	char *optstring_ptr = optstring;
 
 	const struct option *lo_ptr = long_options;
-	while(lo_ptr->name != NULL) {
-		if(!(lo_ptr->val & (FLM_CONFIGONLY|FLM_LONGOPTONLY))) {
+	while (lo_ptr->name != NULL) {
+		if (!(lo_ptr->val & (FLM_CONFIGONLY|FLM_LONGOPTONLY))) {
 			*(optstring_ptr++) = lo_ptr->val & 0xff;
 
-			if(lo_ptr->has_arg == required_argument)
+			if (lo_ptr->has_arg == required_argument)
 				*(optstring_ptr++) = ':';
 
-			if(lo_ptr->has_arg == optional_argument) {
+			if (lo_ptr->has_arg == optional_argument) {
 				*(optstring_ptr++) = ':';
 				*(optstring_ptr++) = ':';
 			}
@@ -278,14 +302,14 @@ int parse_arguments(int argc, char *argv[], clsyncmgr_t *glob_p) {
 	*optstring_ptr = 0;
 
 	// Parsing arguments
-	while(1) {
+	while (1) {
 		c = getopt_long(argc, argv, optstring, long_options, &option_index);
 	
 		if (c == -1) break;
-		int ret = parse_parameter(glob_p, c, optarg, PS_ARGUMENT);
+		int ret = parse_parameter(ctx_p, c, optarg, PS_ARGUMENT);
 		if(ret) return ret;
 	}
-	if(optind+1 < argc) {
+	if (optind+1 < argc) {
 		errno = EINVAL;
 		error("Not enough arguments");
 		syntax();
@@ -296,19 +320,19 @@ int parse_arguments(int argc, char *argv[], clsyncmgr_t *glob_p) {
 
 char *configs_parse_str[1<<10] = {0};
 
-void gkf_parse(clsyncmgr_t *glob_p, GKeyFile *gkf) {
+void gkf_parse(clsyncmgr_t *ctx_p, GKeyFile *gkf) {
 	const struct option *lo_ptr = long_options;
-	while(lo_ptr->name != NULL) {
-		gchar *value = g_key_file_get_value(gkf, glob_p->config_block, lo_ptr->name, NULL);
-		if(value != NULL) {
+	while (lo_ptr->name != NULL) {
+		gchar *value = g_key_file_get_value(gkf, ctx_p->config_block, lo_ptr->name, NULL);
+		if (value != NULL) {
 			unsigned char val_char = lo_ptr->val&0xff;
 
-			if(configs_parse_str[val_char])
+			if (configs_parse_str[val_char])
 				free(configs_parse_str[val_char]);
 
 			configs_parse_str[val_char] = value;
-			int ret = parse_parameter(glob_p, lo_ptr->val, value, PS_CONFIG);
-			if(ret) exit(ret);
+			int ret = parse_parameter(ctx_p, lo_ptr->val, value, PS_CONFIG);
+			if (ret) exit(ret);
 		}
 		lo_ptr++;
 	}
@@ -316,19 +340,19 @@ void gkf_parse(clsyncmgr_t *glob_p, GKeyFile *gkf) {
 	return;
 }
 
-int parse_config(clsyncmgr_t *glob_p) {
+int parse_config(clsyncmgr_t *ctx_p) {
 	GKeyFile *gkf;
 
 	gkf = g_key_file_new();
 
-	if(glob_p->config_path) {
-		debug(1, "Trying config-file \"%s\"", glob_p->config_path);
-		if(!g_key_file_load_from_file(gkf, glob_p->config_path, G_KEY_FILE_NONE, NULL)) {
-			error("Cannot open/parse file \"%s\"", glob_p->config_path);
+	if (ctx_p->config_path) {
+		debug(1, "Trying config-file \"%s\"", ctx_p->config_path);
+		if (!g_key_file_load_from_file(gkf, ctx_p->config_path, G_KEY_FILE_NONE, NULL)) {
+			error("Cannot open/parse file \"%s\"", ctx_p->config_path);
 			g_key_file_free(gkf);
 			return -1;
 		} else
-			gkf_parse(glob_p, gkf);
+			gkf_parse(ctx_p, gkf);
 
 	} else {
 		char *config_paths[] = CONFIG_PATHS;
@@ -338,15 +362,15 @@ int parse_config(clsyncmgr_t *glob_p) {
 		char *homedir = getenv("HOME");
 		size_t homedir_len = strlen(homedir);
 
-		while(*config_path_p != NULL) {
+		while (*config_path_p != NULL) {
 			size_t config_path_len = strlen(*config_path_p);
 
-			if(config_path_len+homedir_len+3 > config_path_real_size) {
+			if (config_path_len+homedir_len+3 > config_path_real_size) {
 				config_path_real_size = config_path_len+homedir_len+3;
 				config_path_real      = xmalloc(config_path_real_size);
 			}
 
-			if(*config_path_p[0] != '/') {
+			if (*config_path_p[0] != '/') {
 				memcpy(config_path_real, homedir, homedir_len);
 				config_path_real[homedir_len] = '/';
 				memcpy(&config_path_real[homedir_len+1], *config_path_p, config_path_len+1);
@@ -354,13 +378,13 @@ int parse_config(clsyncmgr_t *glob_p) {
 				memcpy(config_path_real, *config_path_p, config_path_len+1);
 
 			debug(1, "Trying config-file \"%s\"", config_path_real);
-			if(!g_key_file_load_from_file(gkf, config_path_real, G_KEY_FILE_NONE, NULL)) {
+			if (!g_key_file_load_from_file(gkf, config_path_real, G_KEY_FILE_NONE, NULL)) {
 				debug(1, "Cannot open/parse file \"%s\"", config_path_real);
 				config_path_p++;
 				continue;
 			}
 
-			gkf_parse(glob_p, gkf);
+			gkf_parse(ctx_p, gkf);
 
 			break;
 		}
@@ -372,25 +396,46 @@ int parse_config(clsyncmgr_t *glob_p) {
 	return 0;
 }
 
+int ctx_check(clsyncmgr_t *ctx_p)
+{
+	errno = 0;
+
+/*	if (ctx_p->socketpath == NULL) {
+		errno = EINVAL;
+		error("--socket is not set");
+	}*/
+
+	if (dynamic_count(&ctx_p->watchdirs) == 0) {
+		errno = EINVAL;
+		error("--watch-dirs and --connect are not set");
+	}
+
+	return errno;
+}
+
 int main(int argc, char *argv[])
 {
-	static clsyncmgr_t glob={{0}};
-	clsyncmgr_t *glob_p = &glob;
+	static clsyncmgr_t ctx={{0}};
+	clsyncmgr_t *ctx_p = &ctx;
 	int ret;
 
-	glob_p->config_block = DEFAULT_CONFIG_BLOCK;
+	ctx_p->config_block = DEFAULT_CONFIG_BLOCK;
 
 
-	ret = parse_arguments(argc, argv, glob_p);
+	ret = parse_arguments(argc, argv, ctx_p);
 	if (ret)
 		error("Cannot parse arguments");
 
-	ret = parse_config(glob_p);
+	ret = parse_config(ctx_p);
 	if (ret)
 		error("Cannot parse config file");
 
+	ret = ctx_check(ctx_p);
+	if (ret)
+		error("Got error while checking parameters values");
+
 	if (!ret)
-		ret = clsyncmgr(glob_p);
+		ret = clsyncmgr(ctx_p);
 
 	return ret;
 }

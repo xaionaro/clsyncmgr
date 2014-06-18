@@ -17,15 +17,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "common.h"
-#include "clsyncmgr.h"
-
-struct sighandler_arg {
-	clsyncmgr_t	*ctx_p;
-	sigset_t	*sigset_p;
-};
-typedef struct sighandler_arg sighandler_arg_t;
-
-extern int sighandler_run(clsyncmgr_t *ctx_p);
-extern int sighandler_stop(clsyncmgr_t *ctx_p);
+extern int control_execute(clsyncmgr_t *ctx_p, const char *const cmd);
+#if 0
+extern int control_run(clsyncmgr_t *ctx_p);
+extern int control_cleanup(clsyncmgr_t *ctx_p);
+#endif
 

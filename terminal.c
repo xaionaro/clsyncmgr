@@ -18,14 +18,24 @@
  */
 
 #include "common.h"
+
+#include "malloc.h"
+#include "error.h"
 #include "clsyncmgr.h"
 
-struct sighandler_arg {
-	clsyncmgr_t	*ctx_p;
-	sigset_t	*sigset_p;
-};
-typedef struct sighandler_arg sighandler_arg_t;
+int terminal_run(clsyncmgr_t *ctx_p)
+{
+	critical("Terminal support is not implemented, yet");
+	debug(2, "socket path: <%s>", ctx_p->socketpath);
 
-extern int sighandler_run(clsyncmgr_t *ctx_p);
-extern int sighandler_stop(clsyncmgr_t *ctx_p);
+	return 0;
+}
+
+int terminal_cleanup(clsyncmgr_t *ctx_p)
+{
+	critical("Terminal support is not implemented, yet");
+	debug(2, "");
+
+	return 0;
+}
 

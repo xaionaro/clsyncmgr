@@ -36,7 +36,7 @@ enum sigusr_enum {
 int sighandler_loop(sighandler_arg_t *sighandler_arg_p) {
 	int ret;
 
-	clsyncmgr_t *glob_p	 = sighandler_arg_p->glob_p;
+	clsyncmgr_t *ctx_p	 = sighandler_arg_p->ctx_p;
 	sigset_t *sigset_p       = sighandler_arg_p->sigset_p;
 
 	debug(2, "starting signal handler.");
@@ -47,7 +47,7 @@ int sighandler_loop(sighandler_arg_t *sighandler_arg_p) {
 		debug(3, "waiting for signal");
 		ret = sigwait(sigset_p, &signal);
 
-		if (glob_p->state == STATE_STARTING) {
+		if (ctx_p->state == STATE_STARTING) {
 
 			switch(signal) {
 				case SIGALRM:
@@ -64,7 +64,7 @@ int sighandler_loop(sighandler_arg_t *sighandler_arg_p) {
 			continue;
 		}
 
-		debug(3, "got signal %i. glob_p->state == %i.", signal, glob_p->state);
+		debug(3, "got signal %i. ctx_p->state == %i.", signal, ctx_p->state);
 
 		if (ret) {
 			// TODO: handle an error here
@@ -74,20 +74,20 @@ int sighandler_loop(sighandler_arg_t *sighandler_arg_p) {
 			case SIGALRM:
 			case SIGTERM:
 			case SIGINT:
-				clsyncmgr_switch_state(glob_p, STATE_TERM);
+				clsyncmgr_switch_state(ctx_p, STATE_TERM);
 				break;
 			case SIGHUP:
-				clsyncmgr_switch_state(glob_p, STATE_REHASH);
+				clsyncmgr_switch_state(ctx_p, STATE_REHASH);
 				break;
 			case SIGUSR_PTHREAD_GC:
-				clsyncmgr_switch_state(glob_p, STATE_PTHREAD_GC);
+				clsyncmgr_switch_state(ctx_p, STATE_PTHREAD_GC);
 				break;
 			default:
 				error("Unknown signal: %i. Exit.\n", signal);
-				clsyncmgr_switch_state(glob_p, STATE_TERM);
+				clsyncmgr_switch_state(ctx_p, STATE_TERM);
 				break;
 		}
-		if ((glob_p->state == STATE_TERM) || (glob_p->state == STATE_EXIT))
+		if ((ctx_p->state == STATE_TERM) || (ctx_p->state == STATE_EXIT))
 			break;
 	}
 
@@ -96,7 +96,7 @@ int sighandler_loop(sighandler_arg_t *sighandler_arg_p) {
 }
 
 
-int sighandler_run(clsyncmgr_t *glob_p)
+int sighandler_run(clsyncmgr_t *ctx_p)
 {
 	int ret;
 	static sighandler_arg_t sighandler_arg = {0};
@@ -116,7 +116,7 @@ int sighandler_run(clsyncmgr_t *glob_p)
 	ret = pthread_sigmask(SIG_BLOCK, &sigset_sighandler, NULL);
 	if(ret) return ret;
 
-	sighandler_arg.glob_p		=  glob_p;
+	sighandler_arg.ctx_p		=  ctx_p;
 	sighandler_arg.sigset_p		= &sigset_sighandler;
 	ret = pthread_create(&pthread_sighandler, NULL, (void *(*)(void *))sighandler_loop, &sighandler_arg);
 	if(ret) return ret;
@@ -128,7 +128,7 @@ int sighandler_run(clsyncmgr_t *glob_p)
 	return 0;
 }
 
-int sighandler_stop(clsyncmgr_t *glob_p)
+int sighandler_stop(clsyncmgr_t *ctx_p)
 {
 	void *ret;
 
